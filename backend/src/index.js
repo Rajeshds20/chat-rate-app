@@ -4,19 +4,11 @@ const http = require('http');
 const socketIO = require('socket.io');
 const mongoose = require('mongoose');
 
+const connectDB = require('./config/db');
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
-
-// MongoDB setup
-mongoose.connect('mongodb+srv://testuser:test123@mycluster.hpr4gt6.mongodb.net/chatApp?retryWrites=true&w=majority', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-}).then(function () {
-    console.log('MongoDB connected');
-}).catch(function (err) {
-    console.log(err);
-});
 
 // Define Mongoose schema and model
 const messageSchema = new mongoose.Schema({
@@ -24,12 +16,11 @@ const messageSchema = new mongoose.Schema({
     message: String,
 });
 
-const Message = mongoose.model('Message', messageSchema);
-
-// Express setup
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
+app.get('/', function (req, res) {
+    res.send('Hello World!');
 });
+
+const Message = mongoose.model('Message', messageSchema);
 
 // Socket.io setup
 io.on('connection', (socket) => {
@@ -57,7 +48,7 @@ io.on('connection', (socket) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
 });
