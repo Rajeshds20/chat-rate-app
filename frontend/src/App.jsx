@@ -1,34 +1,34 @@
 import React, { useState } from 'react';
-import './App.css';
 import Messenger from './pages/Messenger';
 import Login from './pages/Login';
-import { onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
-import { auth, provider } from './firebase';
+import LoadingState from './components/LoadingState';
+import createSocketConnection from './config/Socket';
+import { useAuth } from './context/authContext';
+import './App.css';
 
 function App() {
-  const [user, setUser] = useState(null);
+  const { user, loading } = useAuth();
+
+  const socketURL = import.meta.env.VITE_APP_API_URL;
 
   React.useEffect(() => {
-    // Check for user authentication state changes
-    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
-      if (authUser) {
-        setUser(authUser);
-        localStorage.setItem('user', JSON.stringify(authUser));
-        console.log(authUser);
-      } else {
-        setUser(null);
-        localStorage.removeItem('user');
-      }
-    });
-    return () => unsubscribe();
+    const { disconnectSocket } = createSocketConnection(socketURL)
+
+    return () => {
+      // unsubscribe();
+      disconnectSocket();
+    }
   });
 
   return (
     <>
       {
-        user
-          ? <Messenger user={user} setUser={setUser} />
-          : <Login setUser={setUser} />
+        loading
+          ?
+          <LoadingState />
+          : user
+            ? <Messenger />
+            : <Login />
       }
     </>
   )

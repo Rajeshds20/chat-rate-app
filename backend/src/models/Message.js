@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
-    message: {
+    text: {
         type: String,
         required: [true, 'Message is required'],
     },
@@ -9,9 +9,10 @@ const messageSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Sender is required'],
     },
-    receiver: {
-        type: String,
-        required: [true, 'Receiver is required'],
+    chatId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'chat',
+        required: [true, 'Chat ID is required'],
     },
     createdAt: {
         type: Date,

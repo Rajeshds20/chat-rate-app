@@ -2,50 +2,51 @@
 const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
-const mongoose = require('mongoose');
+const cors = require('cors');
 
 const connectDB = require('./config/db');
+const userRoute = require('./routes/userRoute');
+const chatRoute = require('./routes/chatRoute');
+const messageRoute = require('./routes/messageRoute');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
-
-// Define Mongoose schema and model
-const messageSchema = new mongoose.Schema({
-    user: String,
-    message: String,
+const io = socketIO(server, {
+    cors: {
+        origin: '*',
+    }
 });
+app.use(express.json());
+app.use(cors());
 
 app.get('/', function (req, res) {
-    res.send('Hello World!');
+    res.send('Hello from ChatRate!');
 });
+app.use('/users', userRoute);
+app.use('/chats', chatRoute);
+app.use('/messages', messageRoute);
 
-const Message = mongoose.model('Message', messageSchema);
+// Connect to MongoDB
+connectDB();
 
-// Socket.io setup
+// Socket.io
 io.on('connection', (socket) => {
-    console.log('A user connected');
+    console.log(`User connected to ${socket.id}`);
 
-    // Load chat history from the database
-    Message.find({}, (err, messages) => {
-        if (err) throw err;
-        socket.emit('chat history', messages);
+    socket.on('join', ({ userId }) => {
+        socket.join(userId);
+        console.log(`User ${userId} joined`);
     });
 
-    // Handle new messages
-    socket.on('chat message', (msg) => {
-        const newMessage = new Message(msg);
-        newMessage.save((err) => {
-            if (err) throw err;
-            io.emit('chat message', msg);
-        });
+    socket.on('sendMessage', ({ chatId, message }) => {
+        io.to(chatId).emit('receiveMessage', { message });
     });
 
-    // Handle disconnect
     socket.on('disconnect', () => {
         console.log('User disconnected');
     });
 });
+
 
 // Start the server
 const PORT = process.env.PORT || 5000;
