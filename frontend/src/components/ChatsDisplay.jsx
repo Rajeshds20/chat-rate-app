@@ -143,21 +143,15 @@ const ChatsDisplay = () => {
         })
             .then(response => response.json());
         setMyChatMessages({
-            ...myChatMessages, [selectedChat._id]: [...newChatMessages, {
-                text: inputText,
-                sender: user,
-                createdAt: new Date().toISOString(),
-                _id: selectedChat._id + 'efeb',
-            }]
+            ...myChatMessages, [selectedChat._id]: newChatMessages
         });
         setInputText('');
     };
 
-
     return (
         <div>
             <h2>Your Chats</h2>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '50px', flexDirection: 'row', width: '100%', height: '500px', overflow: 'hidden', border: '2px solid white', marginBottom: '30px', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '50px', flexDirection: 'row', width: '100%', height: '500px', overflow: 'auto', border: '2px solid white', marginBottom: '30px', alignItems: 'flex-start' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', justifyContent: 'flex-start', border: '2px solid black', height: '500px', alignItems: 'center' }}>
                     {
                         chats.length > 0
@@ -167,10 +161,13 @@ const ChatsDisplay = () => {
                 </div>
                 <div className='chat-space'>
                     {
-                        selectedChat ? <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', justifyContent: 'center', width: '100%', height: '400px', justifyContent: 'flex-end' }}>
+                        selectedChat ? <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: '100%', height: '400px', justifyContent: 'flex-end' }}>
                             <h2>{selectedUserName}</h2>
                             {/* <p>{JSON.stringify(myChatMessages[selectedChat._id])}</p> */}
-                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{
+                                width: '100%', display: 'flex', flexDirection: 'column', overflow: 'auto',
+                                scrollbarWidth: 'none', border: '4px solid black', height: '80%', borderRadius: '15px',
+                            }}>
                                 {
                                     myChatMessages[selectedChat._id]?.map((msg) => {
                                         // console.log(msg.sender, user.email)
