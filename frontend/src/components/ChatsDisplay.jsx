@@ -65,7 +65,7 @@ const ChatsDisplay = () => {
     const handleKeyDown = React.useCallback((e) => {
         // Handle escape key press
         if (e.key === 'Escape') {
-            console.log(newChats);
+            // console.log(newChats);
 
             if (newChats) {
                 setNewChats(false);
@@ -80,20 +80,29 @@ const ChatsDisplay = () => {
 
     useEffect(() => {
         // Subscribe to messages from the server
-        socket.current.on('message', (data) => {
-            console.log('Message from server', data);
+        socket.current.on('receiveMessage', async ({ chatId, message, senderEmail }) => {
+            console.log('Message received from server', chatId, message, senderEmail);
+            // console.log('Message from server', chatId, message, senderEmail);
+            const newChatMessages = await fetch(API_URL + '/chats/' + chatId, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                }
+            })
+                .then(response => response.json());
+            setMyChatMessages({ ...myChatMessages, [selectedChat._id]: newChatMessages });
         });
 
         // Clean up the event listener when the component unmounts
         return () => {
-            socket.current.off('message');
+            socket.current.off('receiveMessage');
         };
-    }, [socket]);
+    }, [socket, myChatMessages]);
 
     useEffect(() => {
         if (selectedChat) {
             if (selectedChat._id in myChatMessages) {
-                console.log('Already fetched');
+                // console.log('Already fetched');
             }
             else {
                 fetch(API_URL + '/chats/' + selectedChat._id, {
@@ -104,7 +113,7 @@ const ChatsDisplay = () => {
                 })
                     .then(response => response.json())
                     .then(data => {
-                        console.log(data);
+                        // console.log(data);
                         setMyChatMessages({ ...myChatMessages, [selectedChat._id]: data });
                     });
             }
@@ -120,12 +129,27 @@ const ChatsDisplay = () => {
         };
     }, [handleKeyDown]);
 
-    const sendMessage = (inputText) => {
+    const sendMessage = async (inputText) => {
         const otherUser = selectedChat.users.filter((us) => us !== user.email);
         socket.current.emit('sendMessage', { message: inputText, chatId: selectedChat._id, senderEmail: user.email, recieverEmail: otherUser[0] });
         // setMessages((prevMessages) => [...prevMessages, { text: message, user: 'You' }]);
         // myChatMessages[selectedChat._id] = [...myChatMessages[selectedChat._id], { text: inputText, user: user.email }];
-        console.log(inputText);
+        // console.log(inputText);
+        const newChatMessages = await fetch(API_URL + '/chats/' + selectedChat._id, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            }
+        })
+            .then(response => response.json());
+        setMyChatMessages({
+            ...myChatMessages, [selectedChat._id]: [...newChatMessages, {
+                text: inputText,
+                sender: user,
+                createdAt: new Date().toISOString(),
+                _id: selectedChat._id + 'efeb',
+            }]
+        });
         setInputText('');
     };
 
@@ -143,10 +167,25 @@ const ChatsDisplay = () => {
                 </div>
                 <div className='chat-space'>
                     {
-                        selectedChat ? <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', justifyContent: 'center', width: '100%', height: '400px' }}>
+                        selectedChat ? <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', justifyContent: 'center', width: '100%', height: '400px', justifyContent: 'flex-end' }}>
                             <h2>{selectedUserName}</h2>
-                            <p>{JSON.stringify(myChatMessages[selectedChat._id])}</p>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '5px', paddingLeft: '15px', paddingRight: '15px' }}>
+                            {/* <p>{JSON.stringify(myChatMessages[selectedChat._id])}</p> */}
+                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+                                {
+                                    myChatMessages[selectedChat._id]?.map((msg) => {
+                                        // console.log(msg.sender, user.email)
+                                        return (
+                                            <div key={msg?._id} style={{ margin: '3px', maxWidth: '80%', alignSelf: msg.sender.email === user.email ? 'flex-end' : 'flex-start' }}>
+                                                {msg.sender.email == user.email ? 'You' : selectedUserName}
+                                                <div style={{ backgroundColor: 'black', borderRadius: '5px', padding: '5px' }}>
+                                                    {msg.text}
+                                                </div>
+                                            </div>
+                                        )
+                                    })
+                                }
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '5px', paddingLeft: '15px', paddingRight: '15px', paddingBottom: '10px', paddingTop: '10px' }}>
                                 <input type="text" placeholder="Type a message" value={inputText} onChange={(e) => setInputText(e.target.value)} style={{ fontSize: '20px', width: '70%' }} />
                                 <button onClick={() => sendMessage(inputText)} style={{ width: '15%', minWidth: '60px' }}>Send</button>
                             </div>

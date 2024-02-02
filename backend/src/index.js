@@ -11,6 +11,7 @@ const messageRoute = require('./routes/messageRoute');
 const admin = require('./config/firebase');
 const { createMessage } = require("./controllers/messageController");
 const User = require('./models/User');
+const getChatMessages = require('./util/getChatMessages');
 
 const app = express();
 const server = http.createServer(app);
@@ -90,12 +91,20 @@ io.on('connection', (socket) => {
 
         socket.on('sendMessage', ({ chatId, message, recieverEmail, senderEmail, file }) => {
             // const receiverSocketId = socketIds[receiver];
-            console.log('sendMessage', { chatId, message, recieverEmail, senderEmail, file });
+            // console.log('sendMessage', { chatId, message, recieverEmail, senderEmail, file });
             // console.log(receiverSocketId);
             // if (receiverSocketId) {
             //     socket.to(receiverSocketId).emit('receiveMessage', { chatId, message });
             // }
-            createMessage({ text: message, sender: senderEmail, file, recieverEmail, chatId, next: () => socket.emit('receiveMessage', { chatId, message }) });
+            createMessage({
+                text: message, sender: senderEmail, file, recieverEmail, chatId, next: async (msg) => {
+                    // Send message to recieverId
+                    const recieverSocketId = socketIds[recieverEmail];
+                    if (recieverSocketId) {
+                        socket.to(recieverSocketId).emit('receiveMessage', { chatId, message: msg, senderEmail });
+                    }
+                }
+            });
         });
 
         socket.on('disconnect', () => {

@@ -11,7 +11,7 @@ const createMessage = async ({ text, sender, receiverEmail, file, chatId, next }
         const message = new Message({ text, sender: senderId, file, chatId });
         await message.save();
 
-        console.log('Message saved', message);
+        // console.log('Message saved', message);
         next(message);
     } catch (error) {
         console.log(error.message);
