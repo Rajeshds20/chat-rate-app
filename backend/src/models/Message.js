@@ -5,8 +5,12 @@ const messageSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Message is required'],
     },
-    sender: {
+    file: {
         type: String,
+    },
+    sender: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user',
         required: [true, 'Sender is required'],
     },
     chatId: {

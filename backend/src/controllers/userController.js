@@ -1,15 +1,14 @@
 const User = require('../models/User');
 
-const getUser = (req, res) => {
-    const { userId } = req.params;
+const getUsers = (req, res) => {
 
-    User.findById(userId)
-        .then((user) => {
-            if (!user) {
+    User.find()
+        .then((users) => {
+            if (!users) {
                 return res.status(404).json({ error: 'User not found' });
             }
 
-            return res.status(200).json(user);
+            return res.status(200).json(users);
         })
         .catch((error) => {
             return res.status(500).json({ error: error.message });
@@ -34,4 +33,20 @@ const createUser = (req, res) => {
         });
 };
 
-module.exports = { getUser, createUser };
+const getUserByEmail = (req, res) => {
+    const { email } = req.params;
+
+    User.findOne({ email })
+        .then((user) => {
+            if (!user) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+
+            return res.status(200).json(user);
+        })
+        .catch((error) => {
+            return res.status(500).json({ error: error.message });
+        });
+}
+
+module.exports = { getUsers, createUser, getUserByEmail };

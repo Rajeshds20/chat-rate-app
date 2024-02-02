@@ -8,6 +8,9 @@ const connectDB = require('./config/db');
 const userRoute = require('./routes/userRoute');
 const chatRoute = require('./routes/chatRoute');
 const messageRoute = require('./routes/messageRoute');
+const admin = require('./config/firebase');
+const { createMessage } = require("./controllers/messageController");
+const User = require('./models/User');
 
 const app = express();
 const server = http.createServer(app);
@@ -29,24 +32,81 @@ app.use('/messages', messageRoute);
 // Connect to MongoDB
 connectDB();
 
-// Socket.io
-io.on('connection', (socket) => {
-    console.log(`User connected to ${socket.id}`);
+let socketIds = {};
 
-    socket.on('join', ({ userId }) => {
-        socket.join(userId);
-        console.log(`User ${userId} joined`);
-    });
+// Socket Auth Middleware with firebase
+io.use(function (req, next) {
+    const { authorization } = req.handshake.headers;
 
-    socket.on('sendMessage', ({ chatId, message }) => {
-        io.to(chatId).emit('receiveMessage', { message });
-    });
+    if (!authorization || !authorization.startsWith('Bearer ')) {
+        // console.log('No authorization');
+        return
+    }
 
-    socket.on('disconnect', () => {
-        console.log('User disconnected');
-    });
+    const idToken = authorization.split(' ')[1];
+
+    admin.auth().verifyIdToken(idToken)
+        .then((decodedToken) => {
+            // console.log('decodedToken', decodedToken);
+            User.findOne({ email: decodedToken.email })
+                .then((user) => {
+                    if (!user) {
+                        const newUser = new User({
+                            email: decodedToken.email,
+                            displayName: decodedToken.name,
+                            photoURL: decodedToken.picture,
+                        });
+                        newUser.save();
+                        // console.log('newUser', newUser)
+                        req.user = newUser;
+                        return next();
+                    }
+                    req.user = user;
+                    return next();
+                })
+                .catch((error) => {
+                    console.log(error.message);
+                    return
+                });
+            next();
+        })
+        .catch((error) => {
+            console.log(error.message);
+        });
 });
 
+// Socket.io
+io.on('connection', (socket) => {
+    try {
+        if (socket.user.email in socketIds) {
+            console.log('User already connected');
+            // Send error message to client
+            socket.emit('error', { message: 'User already connected' });
+            return socket.disconnect();
+        }
+        console.log(`User connected at ${socket.id}`);
+        socketIds[socket.user.email] = socket.id;
+        // console.log(socketIds);
+
+        socket.on('sendMessage', ({ chatId, message, recieverEmail, senderEmail, file }) => {
+            // const receiverSocketId = socketIds[receiver];
+            console.log('sendMessage', { chatId, message, recieverEmail, senderEmail, file });
+            // console.log(receiverSocketId);
+            // if (receiverSocketId) {
+            //     socket.to(receiverSocketId).emit('receiveMessage', { chatId, message });
+            // }
+            createMessage({ text: message, sender: senderEmail, file, recieverEmail, chatId, next: () => socket.emit('receiveMessage', { chatId, message }) });
+        });
+
+        socket.on('disconnect', () => {
+            console.log('User disconnected');
+            delete socketIds[socket.user.email];
+            // console.log(socketIds);
+        });
+    } catch (error) {
+        console.log(error.message)
+    }
+});
 
 // Start the server
 const PORT = process.env.PORT || 5000;

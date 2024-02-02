@@ -1,22 +1,21 @@
 const Message = require('../models/Message');
+const User = require('../models/User');
 
+const createMessage = async ({ text, sender, receiverEmail, file, chatId, next }) => {
+    try {
+        if (!(text || file) || !sender || !chatId) {
+            return res.status(400).json({ error: 'Text, sender and chat ID are required' });
+        }
 
-const createMessage = (req, res) => {
-    const { text, sender, chatId } = req.body;
+        const senderId = await User.findOne({ email: sender }).select('_id');
+        const message = new Message({ text, sender: senderId, file, chatId });
+        await message.save();
 
-    if (!text || !sender || !chatId) {
-        return res.status(400).json({ error: 'Text, sender and chat ID are required' });
+        console.log('Message saved', message);
+        next(message);
+    } catch (error) {
+        console.log(error.message);
     }
-
-    const message = new Message({ text, sender, chatId });
-
-    message.save()
-        .then((message) => {
-            return res.status(201).json(message);
-        })
-        .catch((error) => {
-            return res.status(500).json({ error: error.message });
-        });
 };
 
 module.exports = { createMessage };

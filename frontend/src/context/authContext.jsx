@@ -1,8 +1,9 @@
 // AuthContext.js
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
 import { auth, provider } from '../config/firebaseConfig';
+import io from 'socket.io-client';
 
 // Create an AuthContext
 const AuthContext = createContext();
@@ -12,12 +13,30 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [token, setToken] = useState(null);
+    const socket = useRef();
+
+    const socketURL = import.meta.env.VITE_APP_API_URL;
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (authUser) => {
-            setUser(authUser);
-            authUser.getIdToken().then((IdToken) => setToken(IdToken));
-            setLoading(false);
+            if (authUser) {
+                setUser(authUser);
+                authUser.getIdToken().then((IdToken) => setToken(IdToken));
+                setLoading(false);
+
+                // Socket.io Connection
+                authUser.getIdToken().then((IdToken) => io(socketURL, {
+                    extraHeaders: {
+                        Authorization: `Bearer ${IdToken}`,
+                    },
+                })).then((skt) => {
+                    socket.current = skt;
+                    console.log(socket.current);
+                });
+            } else {
+                setUser(null);
+                setLoading(false);
+            }
         });
 
         // Cleanup function
@@ -46,7 +65,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, token, signin, signout }}>
+        <AuthContext.Provider value={{ user, loading, token, signin, signout, socket }}>
             {children}
         </AuthContext.Provider>
     );
